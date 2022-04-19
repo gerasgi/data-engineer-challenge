@@ -12,29 +12,30 @@ Clone the repo and then run `python3 main.py`
 Since no information was given around the system where this code is running, 
 certain assumptions were made:
 - There is no sql-injection threat: For generating queries, `f-string` was used (for automation purposes)
-- Assumed that the program is not getting tables' information from `sys.args` or somewhere else and therefore fields/types are hardcoded in many cases
-- Only this join takes place and therefore big part of it is hardcoded
+- The programme is not getting tables' information from `sys.args` or somewhere else and therefore fields/types are hardcoded in many cases
+- Only this join takes place and therefore a big part of it is hardcoded
 
 ## Solution
 
-In order to create the metric, the program reads and iterates through the `wal.json` so it 
-can be flatened and create tables. The program uses a custom library of `sql_tools` where all the sql/json related operations take place (steps):
+In order to create the metric, the programme reads and iterates through the `wal.json`, so it 
+can be flattened and create tables. The programme uses the custom library `sql_tools` where all the sql/json related operations take place (steps).
+Below are the steps:
 - Iterate through the json and ensure that only data from `insert` actions are ingested
-- In each row iteration there is a check whether the respective table (can be found in the row) already exists. If it does not exist, the table gets created automatically
-- After ensuring the existence of the table the program inserts the respective values
-- According to the assignment, nested dictionaries have to be exploded the required fields can be generated. For this operation the program uses the custom functions `add_columns` and `explode_fields`. These two functions run for all the three tables
-- Next step is creating the table that will host the outcome. Fields and respective types are retrieved from a function and are passed as arguments in the function for creating the table
+- With each iteration of each row, there is a check whether the respective table (which can be found in the row) already exists. If it does not exist, the table is created automatically
+- After ensuring the existence of the table, the programme inserts the respective values
+- According to the assignment, nested dictionaries have to be exploded so that the required fields can be generated. For this operation, the programme uses the custom functions `add_columns` and `explode_fields`. These two functions run for the three tables
+- The next step is creating the table that will host the result. Fields and respective types are retrieved from a function and are passed as arguments in the function to create the table
 - Following the previous approach (adding new columns), new columns are added to the new table so it matches the desired output
-- Using a custom function to add/remove elements in a list, we generate a list of the fields matching the outcome's schema
-- Last step is calling a function that performs the required join and write that table into table `outcome` in the `metrics.db`
+- Using a custom function to add/remove elements in a list, the programme generates a list of the fields matching the outcome's schema
+- The last step is calling a function that performs the required join and writes the result into table `outcome`, in the `metrics.db`
 
-In order to get the data in proper format(flattened i.e. list) the program iterated through the `wal.json`. During the iteration, there is check on the table being an `insert` table. In each iteration 
-In each iteration, funtction `append_row` is called. This function inserts the data to the respective table. For that, there is always a check whether this table exists or not. If it does not, the same function takes care of creating the necessary table.
-After having the tables in place, the program alter the schema by adding fields. This is necessary as some of the fields consist of nested objects which need to be exploded and populated accordingly. This is done by calling the `add_columns()` function. Next step is "explode" the necessary fields using another function(`explode_fields()`). Exact location of the objects in the list is hardcoded.
-All tables have all the necessary fields. Next step is the target table `outcome`(where the result will be stored). Program uses the `create_table()` function for creating the table (this is done by getting two hardcoded lists through a function). Then, we alter the schema by using again the `add_rows()`.
-Last part of the program is the join between the tables. This is carried out by a function that executes the required join.
+In order to get the data in proper format(flattened i.e. list) the programme iterates through the `wal.json`. During the iteration, a check is performed on whether or not the table is an `insert` table. 
+In each iteration, function `append_row` is called. This function inserts the data to the respective table. For that to be done, a check, whether or not this table exists, takes place. If it does not exist, the same function takes on to create the necessary table.
+After having the tables in place, the programme alters the schema by adding fields. This is necessary as some of the fields consist of nested objects which need to be exploded and populated accordingly. This is done by calling the `add_columns()` function. The next step is to "explode" the necessary fields using the function(`explode_fields()`). The exact location of the objects in the list is hardcoded.
+All tables have all the necessary fields. The next step is the target table `outcome`(where the result will be stored). The programme uses the `create_table()` function to create the table (this is done by getting two hardcoded lists through a function). Then, the programme alters the schema by using again the `add_rows()`.
+The last part of the programme is the join between the tables. This is carried out by a function that executes the required join.
 Note:
-Program uses `f-Strings` for automation purposes (placeholders in `sqlite3` have a limitation when it comes to tables/columns names - it is always strongly recommended though using tuples as to avoid sql-injections)
+The programme uses `f-Strings` for automation purposes (placeholders in `sqlite3` have a limitation when it comes to tables/columns names - it is always strongly recommended to use tuples as to avoid sql-injections)
 
 ## Outcome
 The outcome is table `outcome` in `metrics` database. It consists of 529 records. Its schema is the following:
