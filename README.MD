@@ -1,84 +1,35 @@
 # Data Engineer Challenge
 
-We are going to simulate processing batches of WAL records. The data from these records will be used to display metrics to our customers within the dashboard, but before the data can be used, the records need to be preprocessed, joined together, and then inserted into a database for use by our dashboard (for this task, we are going to use sqlite to keep it simple, but in reality we would be using something like Elasticsearch).
+This repo contains the solution for Primer's Data Challenge
 
-### WAL
-A WAL record is created each time there is an insert, update, or delete in the database - we will only be dealing with insert records for this exercise. Each WAL record is represented by a dictionary in Python:
-  
-```
-  ## INSERT
-  {
-    "change": [
-      {
-        "kind": "insert",
-        "schema": "public",
-        "table": "foo",
-        "columnnames": ["a", "b", "c"],
-        "columntypes": ["integer", "character varying(30)", "timestamp without time zone"],
-        "columnvalues": [1, "Backup and Restore", "2018-03-27 12:05:29.914496"]
-      }
-    ]
-  }
+### How To Run
 
-```	
-- The WAL records are produced by 4 tables called:
-	- event_v2_data
-	- transaction
-	- transaction_request
-	- payment_instrument_token_data
+Python 3 is required for running this application.
+Clone the repo and then run `python3 main.py`
 
-## The Task
-`wal.json` contains a list of WAL records - in order to generate the dashboard metric, we need to join an `event_v2_data`, `transaction`, `transaction_request`, and `payment_instrument_token_data` record together. Records can be joined like this:
 
-```
-  event_v2_data.transaction_id = transaction.transaction_id
-  event_v2_data.flow_id = transaction_request.flow_id
-  transaction_request.token_id = payment_instrument_token_data.token_id
-```
+## Solution
 
-After joining the 4 records together, we only want to keep a subset of the data - the final metric should look like 
+In order to create the metric, the program reads and iterates through the `wal.json` so it 
+can be flatened and create tables. The program uses a custom library of `sql_tools` where all the sql/json related operations take place (steps):
+- Iterate through the json and ensure that only data from `insert` actions are ingested
+- In each row iteration there is a check whether the respective table (can be found in the row) already exists. If it does not exist, the table gets created automatically
+- After ensuring the existence of the table the program inserts the respective values
+- According to the assignment, nested dictionaries have to be exploded the required fields can be generated. For this operation the program uses the custom functions `add_columns` and `explode_fields`. These two functions run for all the three tables
+- Next step is creating the table that will host the outcome. Fields and respective types are retrieved from a function and are passed as arguments in the function for creating the table
+- Following the previous approach (adding new columns), new columns are added to the new table so it matches the desired output
+- Using a custom function to add/remove elements in a list, we generate a list of the fields matching the outcome's schema
+- Last step is calling a function that performs the required join and write that table into table `outcome` in the `metrics.db`
 
-```
-	{
-		"event_v2_data.event_id": "value",
-		"event_v2_data.flow_id": "value",
-		"event_v2_data.created_at": "value",
-		"event_v2_data.transaction_lifecycle_event": "value",
-		"event_v2_data.error_details.decline_reason": "value",
-		"event_v2_data.error_details.decline_type": "value",
-		"transaction_request.vault_options.payment_method": "value",
-		"transaction.transaction_id": "value",
-		"transaction.transaction_type": "value",
-		"transaction.amount": "value",
-		"transaction.currency_code": "value",
-		"transaction.processor_merchant_account_id": "value",
-		"payment_instrument_token_data.three_d_secure_authentication": "value",
-		"payment_instrument_token_data.payment_instrument_type": "value",
-		"payment_instrument_token_data.vault_data.customer_id": "value"
-	}
-```
+## Assumptions
 
-I have included the table name as well as the column to make it easier for you to know where each data point in the metric should come from, but please do not include the table name when inserting into the database (ie the column name for `transaction_request.vault_options.payment_method` should just be `payment_method`). You will need to create a table in sqlite to store the metric - the WAL records should have everything you need to do that including the `type` for each column. 
+Since no information was given around the system where this code is running, 
+certain assumptions were made:
+- There is no sql-injection threat: For generating queries, `f-string` was used (for automation purposes)
+- Assumed that the program is not getting tables' information from `sys.args` or somewhere else and therefore fields/types are hardcoded in many cases
+- Only this join takes place and therefore big part of it is hardcoded
 
-Once the metric has been created, add the metric into the database. When finished, you should have 529 records in the database. 
 
-Please do the challenge in Python using only the modules contained in standard library - do not use third party libraries such as pandas. `main.py` contains a small amount of code to get you started, but feel free to keep or discard it. 
-
-## What We're Looking For
-
-☑️  Working code
-
-☑️  Clean code
-
-☑️  Good documentation
-
-## Finishing Up 📈
-
-📄 1. Document your findings, how did you go about solving the challenge?
-
-☁️ 2. Push your work to your fork on GitHub 
-
-✉️ 3. Share both the code and your findings with us (please add the Github user primer-api as a reviewer) 🎉 
 
 
 
